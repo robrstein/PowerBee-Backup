@@ -1,11 +1,11 @@
-# pbDBbackup
+# PowerBee Backup
 
 **Respaldo lógico de esquemas Oracle a scripts SQL restaurables**, con visor web sin servidor y copia automática en Cloudflare R2.
 
-Pensado para Oracle Autonomous Database (incluido el free tier de OCI), donde los respaldos administrados son limitados y Data Pump no deja nada legible. pbDBbackup lee el esquema completo (estructura, código y datos) y genera scripts `.sql` en texto plano, ordenados para restaurarse sin errores con SQLcl o SQL\*Plus en un esquema vacío, ya sea el mismo u otro.
+Pensado para Oracle Autonomous Database (incluido el free tier de OCI), donde los respaldos administrados son limitados y Data Pump no deja nada legible. PowerBee Backup lee el esquema completo (estructura, código y datos) y genera scripts `.sql` en texto plano, ordenados para restaurarse sin errores con SQLcl o SQL\*Plus en un esquema vacío, ya sea el mismo u otro.
 
 <p align="center">
-  <img src="assets/img/arquitectura-animada.svg" alt="Arquitectura de pbDBbackup (animada)" width="100%">
+  <img src="assets/img/arquitectura-animada.svg" alt="Arquitectura de PowerBee Backup (animada)" width="100%">
 </p>
 
 > Todas las imágenes y videos de este repositorio usan un esquema de demostración (`TIENDA_DEMO`) con **datos ficticios**.
@@ -31,7 +31,7 @@ Pensado para Oracle Autonomous Database (incluido el free tier de OCI), donde lo
   <img src="assets/img/arquitectura.svg" alt="Diagrama de arquitectura" width="100%">
 </p>
 
-pbDBbackup es una CLI en Python de **un solo archivo**. Solo depende de `python-oracledb` y `python-dotenv` (más `boto3` si se usa la copia en R2). Se conecta al esquema de origen con el wallet mTLS de Autonomous DB, en modo *thin* o *thick* (Instant Client), y recorre seis etapas:
+PowerBee Backup es una CLI en Python de **un solo archivo** (`pbdbbackup.py`). Solo depende de `python-oracledb` y `python-dotenv` (más `boto3` si se usa la copia en R2). Se conecta al esquema de origen con el wallet mTLS de Autonomous DB, en modo *thin* o *thick* (Instant Client), y recorre seis etapas:
 
 | # | Etapa | Qué hace |
 |---|---|---|
