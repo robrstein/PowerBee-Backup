@@ -319,7 +319,9 @@ Si un R2 falla, los demás se suben igual; al final se informa cuántos fallaron
 
 ### Varias bases, varios nodos y varios R2
 
-Las tres dimensiones se combinan sin configuración adicional: cada nodo declara los proyectos que respalda (`PBDB_PROYECTOS`) y la lista de R2 de su `.env`. Un mismo proyecto puede estar cubierto por varios nodos; para cada proyecto y día, cada R2 acepta una sola subida (reserva condicional), así que no se duplican ni se pisan.
+Las tres dimensiones (`bases[n]`, `nodos[n]` y `R2[N]`) se combinan sin configuración adicional: cada nodo declara los proyectos que respalda (`PBDB_PROYECTOS`) y la lista de R2 de su `.env`. Un mismo proyecto puede estar cubierto por varios nodos; para cada proyecto y día, cada R2 acepta una sola subida (reserva condicional), así que no se duplican ni se pisan.
+
+El diagrama muestra todas las combinaciones: cualquier nodo lee cualquier base y sube a cualquier R2 (líneas continuas), y el **camino de vuelta** (línea punteada): si un R2 ya tiene el día y el nodo no tiene copia local, el nodo lo baja en vez de consultar la base, y con esa copia rellena los R2 que faltan.
 
 <p align="center">
   <img src="assets/img/topologia.svg" alt="Topología con varias bases Oracle, varios nodos y varios R2" width="100%">
