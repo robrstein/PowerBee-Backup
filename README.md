@@ -317,6 +317,14 @@ Cada R2 se evalúa **por separado**, con su propia reserva y su propio `_hecho.j
 
 Si un R2 falla, los demás se suben igual; al final se informa cuántos fallaron y el comando termina con código 1 (la copia local no se toca).
 
+### Varias bases, varios nodos y varios R2
+
+Las tres dimensiones se combinan sin configuración adicional: cada nodo declara los proyectos que respalda (`PBDB_PROYECTOS`) y la lista de R2 de su `.env`. Un mismo proyecto puede estar cubierto por varios nodos; para cada proyecto y día, cada R2 acepta una sola subida (reserva condicional), así que no se duplican ni se pisan.
+
+<p align="center">
+  <img src="assets/img/topologia.svg" alt="Topología con varias bases Oracle, varios nodos y varios R2" width="100%">
+</p>
+
 ### Rellenar un R2 nuevo sin tocar la base
 
 Si agregas un R2 a la lista (o uno estuvo caído) mientras otros ya tienen el día completo, el nodo **baja** el respaldo de un R2 que lo tenga (`--si-en-r2 bajar`, por defecto), lo deja como copia local verificada por tamaño y lo sube a los que faltan. La base de datos no se consulta y todos los R2 quedan con exactamente el mismo respaldo. Con `--si-en-r2 nobajar` extrae de la base y deja solo la copia local; con `omitir` no hace nada.
