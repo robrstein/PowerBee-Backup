@@ -22,6 +22,7 @@ Pensado para Oracle Autonomous Database (incluido el free tier de OCI), donde lo
 - [Visor web](#visor-web)
 - [Restaurar](#restaurar)
 - [Copia en Cloudflare R2 y ejecución en varios nodos](#copia-en-cloudflare-r2-y-ejecución-en-varios-nodos)
+- [Distribución en varios R2](#distribución-en-varios-r2)
 
 ---
 
@@ -175,7 +176,7 @@ COMMIT;
 | `--sin-secuencias` | No reposiciona las secuencias |
 | `--subir` | Después de generar, sube el respaldo a Cloudflare R2 y verifica el tamaño remoto |
 | `--una-por-dia` | Para ejecución programada: como máximo un respaldo por proyecto y día, coordinado entre nodos |
-| `--si-en-r2 local\|omitir` | Si otro nodo ya reservó o subió el día: extraer igual y dejar solo la copia local, o no hacer nada |
+| `--si-en-r2 bajar\|nobajar\|omitir` | Si un R2 ya tiene el día: `bajar` (defecto) lo descarga como copia local sin tocar la BD; `nobajar` extrae igual y deja solo la copia local; `omitir` no hace nada |
 | `--retener N` | Conserva solo las N copias locales más recientes del proyecto |
 
 Variables que se reconocen solas en un `.env`: `DB_USER`/`ORACLE_USER`, `DB_PASSWORD`/`ORACLE_PASSWORD`, `DB_CONNECT_STRING`/`ORACLE_DSN`, `DB_WALLET_DIR`/`ORACLE_CONFIG_DIR`/`TNS_ADMIN`, `DB_WALLET_PASSWORD` y `ORACLE_LIB_DIR`.
@@ -259,6 +260,8 @@ Con `--subir`, el respaldo queda en la copia local como siempre y además se sub
 | `R2_PREFIJO` | Opcional: carpeta raíz dentro del bucket |
 | `PBDB_NODO` | Opcional: nombre del nodo (por defecto, el hostname) |
 
+Las variables `R2_*` admiten listas para subir a varios buckets a la vez: ver [Distribución en varios R2](#distribución-en-varios-r2).
+
 Cada respaldo queda en `[prefijo/]<proyecto>/<AAAA-MM-DD>/<archivo>`, junto con un `_hecho.json` que registra el nodo, la hora y los tamaños. La retención en R2 se define con *Object lifecycle rules* del bucket.
 
 ### Ejecución programada en una o varias VM
@@ -272,7 +275,7 @@ Cada VM corre un **timer de systemd** (por ejemplo, cada 6 h con desfase aleator
 | Copia local de hoy | `_hecho.json` en R2 | Qué hace el nodo |
 |---|---|---|
 | no | no | **Reserva** el día, extrae, sube, escribe `_hecho.json` y libera la reserva |
-| no | sí, o reservado por otro nodo | Extrae igual y deja solo su copia local (`--si-en-r2 local`) o no hace nada (`omitir`) |
+| no | sí, o reservado por otro nodo | Baja el respaldo de R2 como copia local (`--si-en-r2 bajar`, defecto), extrae igual y deja solo copia local (`nobajar`) o no hace nada (`omitir`) |
 | sí | no | No toca la base: sube la copia local de hoy (reintenta una subida fallida) |
 | sí | sí | Nada |
 
@@ -283,6 +286,46 @@ Si la extracción o la subida fallan, la reserva se borra para que otro nodo, o 
 </p>
 
 ▶ [Ver en MP4](assets/video/sim-nodos.mp4)
+
+---
+
+## Distribución en varios R2
+
+Para no depender de un solo proveedor o cuenta, el respaldo **completo** puede subirse a **N buckets R2** (en la misma o en distintas cuentas de Cloudflare). Cada variable `R2_*` admite una lista separada por comas; la posición une los valores (el 1.º de cada lista es el R2 #1, el 2.º el R2 #2, etc.) y una variable con un solo valor se usa en todos los destinos:
+
+```bash
+R2_ACCOUNT_ID=idCuentaA,idCuentaB,idCuentaC
+R2_ACCESS_KEY_ID=claveA,claveB,claveC
+R2_SECRET_ACCESS_KEY=secretoA,secretoB,secretoC
+R2_BUCKET=pbdb-respaldos-a,pbdb-respaldos-b,pbdb-respaldos-c
+R2_PREFIJO=pbdb          # un solo valor: se usa en los tres
+```
+
+Con un solo valor por variable todo funciona como antes. Una lista con un tamaño distinto de 1 o N, o dos destinos idénticos (misma cuenta, bucket y prefijo), se rechaza al arrancar.
+
+<p align="center">
+  <img src="assets/img/distribucion-r2.svg" alt="Respaldo distribuido en varios buckets R2" width="100%">
+</p>
+
+Cada R2 se evalúa **por separado**, con su propia reserva y su propio `_hecho.json`:
+
+| Estado de cada R2 hoy | Qué hace el nodo con ese R2 |
+|---|---|
+| Sin respaldo del día | Lo reserva y le sube el respaldo completo, verificando tamaños |
+| Ya tiene `_hecho.json` | Lo omite |
+| Reservado por otro nodo (< 6 h) | Lo omite y lo informa |
+
+Si un R2 falla, los demás se suben igual; al final se informa cuántos fallaron y el comando termina con código 1 (la copia local no se toca).
+
+### Rellenar un R2 nuevo sin tocar la base
+
+Si agregas un R2 a la lista (o uno estuvo caído) mientras otros ya tienen el día completo, el nodo **baja** el respaldo de un R2 que lo tenga (`--si-en-r2 bajar`, por defecto), lo deja como copia local verificada por tamaño y lo sube a los que faltan. La base de datos no se consulta y todos los R2 quedan con exactamente el mismo respaldo. Con `--si-en-r2 nobajar` extrae de la base y deja solo la copia local; con `omitir` no hace nada.
+
+<p align="center">
+  <img src="assets/video/sim-distribucion.gif" alt="Simulación: un día normal sube a 2 R2; al agregar un tercero se rellena bajando de un R2 existente" width="100%">
+</p>
+
+▶ [Ver en MP4](assets/video/sim-distribucion.mp4)
 
 ---
 
